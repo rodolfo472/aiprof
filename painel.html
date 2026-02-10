@@ -1,149 +1,42 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<title>AI Prof - Painel</title>
+  <meta charset="UTF-8">
+  <title>AI Prof - Painel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<style>
-body {
-    font-family: Arial, sans-serif;
-    background: #0f172a;
-    color: white;
-    text-align: center;
-}
-#painel {
-    max-width: 600px;
-    margin: auto;
-    background: #1e293b;
-    padding: 15px;
-    border-radius: 10px;
-}
-#mensagens {
-    background: #020617;
-    height: 250px;
-    overflow-y: auto;
-    padding: 10px;
-    border-radius: 8px;
-    text-align: left;
-}
-.linha {
-    display: flex;
-    margin-top: 10px;
-    gap: 5px;
-}
-button {
-    padding: 8px;
-}
-input[type="text"] {
-    flex: 1;
-    padding: 8px;
-}
-</style>
-
-</head>
-<body>
-
-<div id="painel">
-    <h1>AI Prof</h1>
-
-    <p>Usuário: <b><span id="user"></span></b></p>
-    <p>Moedas: 🪙 <span id="moedas">0</span></p>
-
-    <h3>Chat do AI Prof</h3>
-
-    <div id="mensagens"></div>
-
-    <div class="linha">
-        <button onclick="enviar()">Enviar</button>
-        <input id="texto" type="text" placeholder="Digite qualquer pergunta">
-    </div>
-</div>
-
-<script>
-// ================= LOGIN =================
-const usuario = localStorage.getItem("usuarioLogado");
-
-if (!usuario) {
-    alert("Você precisa fazer login primeiro!");
-    window.location.href = "index.html";
-}
-
-document.getElementById("user").innerText = usuario;
-
-// ================= MOEDAS =================
-let moedas = 0;
-setInterval(() => {
-    moedas++;
-    document.getElementById("moedas").innerText = moedas;
-}, 1000);
-
-// ================= CHAT =================
-async function enviar() {
-    const textoEl = document.getElementById("texto");
-    const mensagem = textoEl.value.trim();
-    if (!mensagem) return;
-
-    const chat = document.getElementById("mensagens");
-
-    chat.innerHTML += `<p><b>Você:</b> ${mensagem}</p>`;
-    textoEl.value = "";
-
-    const loadingId = Date.now();
-    chat.innerHTML += `<p id="${loadingId}"><b>AI Prof:</b> Pensando...</p>`;
-    chat.scrollTop = chat.scrollHeight;
-
-    const resposta = await chamarIA(mensagem);
-
-    document.getElementById(loadingId).innerHTML =
-        `<b>AI Prof:</b> ${resposta}`;
-}
-
-// ================= IA REAL =================
-async function chamarIA(pergunta) {
-    const API_KEY = "COLE_SUA_API_KEY_AQUI"; // ⚠️ COLE SUA CHAVE
-
-    try {
-        const response = await fetch(
-            "https://api.openai.com/v1/chat/completions",
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": "Bearer " + API_KEY
-                },
-                body: JSON.stringify({
-                    model: "gpt-4o-mini",
-                    messages: [
-                        {
-                            role: "system",
-                            content: "Você é o AI Prof, um professor inteligente que responde qualquer pergunta em português de forma clara."
-                        },
-                        {
-                            role: "user",
-                            content: pergunta
-                        }
-                    ]
-                })
-            }
-        );
-
-        if (!response.ok) {
-            return "Erro da IA (status " + response.status + ")";
-        }
-
-        const data = await response.json();
-
-        if (!data.choices || !data.choices[0]) {
-            return "Resposta inválida da IA.";
-        }
-
-        return data.choices[0].message.content;
-
-    } catch (erro) {
-        return "Erro de conexão com a IA.";
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
     }
-}
-</script>
 
-</body>
-</html>
+    header {
+      background: #020617;
+      padding: 15px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+      border-bottom: 1px solid #1e293b;
+    }
+
+    #chat {
+      flex: 1;
+      padding: 15px;
+      overflow-y: auto;
+    }
+
+    .msg {
+      margin-bottom: 12px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      max-width: 80%;
+      word-wrap: break-word;
+    }
+
+    .
