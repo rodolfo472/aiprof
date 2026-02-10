@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Chat</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+  margin:0;
+  background:#0f172a;
+  color:white;
+  font-family:Arial;
+}
+header {
+  background:#020617;
+  padding:10px;
+  text-align:center;
+}
+.container {
+  padding:10px;
+}
+.contact {
+  background:#020617;
+  padding:10px;
+  border-radius:8px;
+  margin-bottom:5px;
+}
+input, button {
+  width:100%;
+  padding:10px;
+  margin-top:5px;
+  border-radius:8px;
+  border:none;
+}
+button {
+  background:#22c55e;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  👤 <span id="user"></span> | ID: <b><span id="myId"></span></b>
+</header>
+
+<div class="container">
+
+<h3>➕ Adicionar contato</h3>
+<input id="novoId" placeholder="ID do contato (7 dígitos)">
+<button onclick="adicionarContato()">Adicionar</button>
+
+<hr>
+
+<h3>💬 Contatos</h3>
+<div id="lista"></div>
+
+<button onclick="sair()">🚪 Sair</button>
+
+</div>
+
+<script>
+// proteção
+if (!localStorage.getItem("usuario_nome")) {
+  location.href = "index.html";
+}
+
+const nome = localStorage.getItem("usuario_nome");
+const genero = localStorage.getItem("usuario_genero");
+const meuId = localStorage.getItem("usuario_id");
+
+user.innerText = `${nome} (${genero})`;
+myId.innerText = meuId;
+
+let contatos = JSON.parse(localStorage.getItem("contatos")) || [];
+
+function renderContatos() {
+  lista.innerHTML = "";
+  contatos.forEach(id => {
+    const div = document.createElement("div");
+    div.className = "contact";
+    div.innerText = "Contato ID: " + id;
+    lista.appendChild(div);
+  });
+}
+
+function adicionarContato() {
+  const id = novoId.value.trim();
+
+  if (!/^\d{7}$/.test(id)) {
+    alert("ID inválido (7 dígitos)");
+    return;
+  }
+
+  if (id === meuId) {
+    alert("Você não pode adicionar seu próprio ID");
+    return;
+  }
+
+  if (contatos.includes(id)) {
+    alert("Contato já adicionado");
+    return;
+  }
+
+  contatos.push(id);
+  localStorage.setItem("contatos", JSON.stringify(contatos));
+  novoId.value = "";
+  renderContatos();
+}
+
+function sair() {
+  localStorage.clear();
+  location.href = "index.html";
+}
+
+renderContatos();
+</script>
+
+</body>
+</html>
