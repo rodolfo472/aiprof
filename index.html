@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>AI Prof - Game Chat</title>
+<title>Criador de Imagens</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
@@ -11,13 +11,12 @@ body {
   font-family: Arial, sans-serif;
   background: #0f172a;
   color: white;
+  text-align: center;
 }
-.hidden { display: none; }
 
 header {
   background: #020617;
   padding: 15px;
-  text-align: center;
   font-size: 22px;
   font-weight: bold;
 }
@@ -30,6 +29,7 @@ input, button {
   padding: 10px;
   margin: 5px 0;
   width: 100%;
+  max-width: 400px;
   border-radius: 8px;
   border: none;
   font-size: 16px;
@@ -40,202 +40,128 @@ button {
   cursor: pointer;
 }
 
-#chat {
-  height: 220px;
-  background: #020617;
-  border-radius: 8px;
-  padding: 10px;
-  overflow-y: auto;
-  margin-bottom: 10px;
-}
-
-.msg { margin-bottom: 8px; }
-.user { color: #60a5fa; }
-.system { color: #22c55e; }
-
-.panel {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.panel div {
-  flex: 1;
-  background: #020617;
-  padding: 10px;
-  border-radius: 8px;
-  text-align: center;
-}
-
 canvas {
-  margin-top: 10px;
+  margin-top: 15px;
   background: #000;
-  border-radius: 10px;
+  border-radius: 12px;
 }
 </style>
 </head>
 
 <body>
 
-<header>🎮 AI Prof - Game Chat</header>
+<header>🖼 Criador de Imagens</header>
 
-<div class="container" id="auth">
-  <h3>Registrar / Login</h3>
-  <input id="name" placeholder="Nome">
-  <input id="pass" type="password" placeholder="Senha">
-  <button onclick="login()">Entrar</button>
-</div>
-
-<div class="container hidden" id="game">
-
-  <div class="panel">
-    <div>💰 Moedas<br><span id="coins">0</span></div>
-    <div>🏆 Nível<br><span id="rank">1</span></div>
-  </div>
-
-  <div id="chat"></div>
-
-  <input id="msg" placeholder="Digite sua mensagem">
-  <button onclick="send()">Enviar</button>
-
-  <hr>
-
-  <button onclick="buyPrize()">🎁 Comprar Prêmio (100.000 moedas)</button>
-
-  <hr>
-
-  <h3>🖼 Criador de Imagens</h3>
-  <input id="imgText" placeholder="Descreva a imagem (ex: fogo, gamer, azul)">
+<div class="container">
+  <input id="pedido" placeholder="Ex: quero uma imagem de fogo">
   <button onclick="criarImagem()">Criar Imagem</button>
   <button onclick="baixarImagem()">Baixar Imagem</button>
 
   <canvas id="canvas" width="300" height="300"></canvas>
-
 </div>
 
 <script>
-let user = null;
-let coins = 0;
-
-// LOGIN
-function login() {
-  const name = document.getElementById("name").value;
-  const pass = document.getElementById("pass").value;
-  if (!name || !pass) return alert("Preencha tudo");
-
-  user = name;
-  coins = Number(localStorage.getItem("coins_" + user)) || 0;
-
-  auth.classList.add("hidden");
-  game.classList.remove("hidden");
-
-  systemMsg("Bem-vindo, " + user + "!");
-  update();
-}
-
-// CHAT
-function send() {
-  const text = msg.value.trim();
-  if (!text) return;
-
-  chatMsg(user + ": " + text, "user");
-  msg.value = "";
-
-  setTimeout(() => responderSistema(text), 500);
-}
-
-function chatMsg(text, cls) {
-  const div = document.createElement("div");
-  div.className = "msg " + cls;
-  div.innerText = text;
-  chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
-}
-
-function systemMsg(text) {
-  chatMsg("AI Prof: " + text, "system");
-}
-
-// RESPOSTAS AUTOMÁTICAS
-function responderSistema(pergunta) {
-  pergunta = pergunta.toLowerCase();
-  let r = "";
-
-  if (pergunta.includes("hora"))
-    r = "Agora são " + new Date().toLocaleTimeString("pt-BR");
-  else if (pergunta.includes("dia") || pergunta.includes("data"))
-    r = "Hoje é " + new Date().toLocaleDateString("pt-BR");
-  else if (pergunta.includes("capital do brasil"))
-    r = "A capital do Brasil é Brasília.";
-  else if (pergunta.includes("brasil"))
-    r = "O Brasil foi descoberto em 1500.";
-  else if (pergunta.includes("oi") || pergunta.includes("olá"))
-    r = "Olá! Como posso ajudar?";
-  else if (pergunta.includes("moeda"))
-    r = "Você ganha 1 moeda por segundo online.";
-  else if (/[0-9]/.test(pergunta) && /[\+\-\*\/]/.test(pergunta)) {
-    try {
-      r = "Resultado: " + eval(pergunta.replace(/[^0-9+\-*/.]/g, ""));
-    } catch {
-      r = "Não consegui calcular.";
-    }
-  } else
-    r = "Posso responder horas, datas, Brasil, moedas e matemática básica.";
-
-  systemMsg(r);
-}
-
-// MOEDAS
-setInterval(() => {
-  if (user) {
-    coins++;
-    update();
-  }
-}, 1000);
-
-function update() {
-  coinsEl.innerText = coins;
-  rankEl.innerText = Math.max(1, Math.floor(coins / 1000));
-  localStorage.setItem("coins_" + user, coins);
-}
-
-function buyPrize() {
-  if (coins >= 100000) {
-    coins -= 100000;
-    systemMsg("🎉 Prêmio comprado!");
-    update();
-  } else {
-    systemMsg("❌ Moedas insuficientes.");
-  }
-}
-
-// CRIADOR DE IMAGEM
 function criarImagem() {
-  const texto = imgText.value || "AI Prof";
-  const c = canvas;
-  const ctx = c.getContext("2d");
+  const texto = document.getElementById("pedido").value.toLowerCase();
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
 
-  ctx.fillStyle = `hsl(${Math.random()*360},70%,40%)`;
-  ctx.fillRect(0,0,300,300);
+  ctx.clearRect(0, 0, 300, 300);
 
-  for (let i=0;i<10;i++) {
-    ctx.beginPath();
-    ctx.arc(Math.random()*300,Math.random()*300,Math.random()*60,0,Math.PI*2);
-    ctx.fillStyle = "rgba(255,255,255,0.2)";
-    ctx.fill();
+  // 🔥 FOGO
+  if (texto.includes("fogo")) {
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0,0,300,300);
+
+    for (let i=0;i<150;i++) {
+      ctx.beginPath();
+      ctx.arc(
+        Math.random()*300,
+        200 + Math.random()*100,
+        Math.random()*25,
+        0,
+        Math.PI*2
+      );
+      ctx.fillStyle = `rgba(255, ${Math.random()*120}, 0, 0.7)`;
+      ctx.fill();
+    }
   }
 
-  ctx.fillStyle = "#fff";
-  ctx.font = "bold 22px Arial";
-  ctx.textAlign = "center";
-  ctx.fillText(texto.substring(0,20),150,160);
+  // ☁️ CÉU
+  else if (texto.includes("céu") || texto.includes("ceu")) {
+    ctx.fillStyle = "#4da6ff";
+    ctx.fillRect(0,0,300,300);
 
-  systemMsg("Imagem criada 🎨");
+    for (let i=0;i<6;i++) {
+      ctx.beginPath();
+      ctx.arc(
+        Math.random()*300,
+        Math.random()*150,
+        30 + Math.random()*30,
+        0,
+        Math.PI*2
+      );
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.fill();
+    }
+  }
+
+  // 💧 ÁGUA
+  else if (texto.includes("água") || texto.includes("agua")) {
+    ctx.fillStyle = "#0033cc";
+    ctx.fillRect(0,0,300,300);
+
+    for (let y=0;y<300;y+=20) {
+      ctx.beginPath();
+      ctx.moveTo(0,y);
+      for (let x=0;x<=300;x+=20) {
+        ctx.lineTo(x, y + Math.sin(x*0.05)*6);
+      }
+      ctx.strokeStyle = "rgba(255,255,255,0.3)";
+      ctx.stroke();
+    }
+  }
+
+  // 🎮 GAMER
+  else if (texto.includes("gamer") || texto.includes("jogo")) {
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0,0,300,300);
+
+    for (let i=0;i<40;i++) {
+      ctx.fillStyle = `hsl(${Math.random()*360},100%,60%)`;
+      ctx.fillRect(
+        Math.random()*300,
+        Math.random()*300,
+        20,
+        20
+      );
+    }
+  }
+
+  // 🎨 PADRÃO
+  else {
+    ctx.fillStyle = "#222";
+    ctx.fillRect(0,0,300,300);
+
+    for (let i=0;i<25;i++) {
+      ctx.beginPath();
+      ctx.arc(
+        Math.random()*300,
+        Math.random()*300,
+        Math.random()*40,
+        0,
+        Math.PI*2
+      );
+      ctx.fillStyle = `hsl(${Math.random()*360},70%,50%)`;
+      ctx.fill();
+    }
+  }
 }
 
 function baixarImagem() {
+  const canvas = document.getElementById("canvas");
   const link = document.createElement("a");
-  link.download = "imagem_ai_prof.png";
+  link.download = "imagem.png";
   link.href = canvas.toDataURL();
   link.click();
 }
