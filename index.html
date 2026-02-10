@@ -2,92 +2,200 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Cadastro</title>
+<title>Block Blast Web</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
 body {
-  background:#0f172a;
-  color:white;
-  font-family:Arial;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
+  margin: 0;
+  background: #0f172a;
+  color: white;
+  font-family: Arial, sans-serif;
+  text-align: center;
 }
-.card {
-  background:#020617;
-  padding:20px;
-  border-radius:14px;
-  width:300px;
+
+h1 {
+  margin: 10px;
 }
-input, select, button {
-  width:100%;
-  padding:10px;
-  margin-top:8px;
-  border-radius:8px;
-  border:none;
+
+#score {
+  font-size: 20px;
+  margin-bottom: 10px;
 }
-button { background:#22c55e; }
+
+#board {
+  display: grid;
+  grid-template-columns: repeat(8, 40px);
+  gap: 4px;
+  justify-content: center;
+  margin: 20px auto;
+}
+
+.cell {
+  width: 40px;
+  height: 40px;
+  background: #1e293b;
+  border-radius: 6px;
+}
+
+.block {
+  background: #22c55e;
+}
+
+#blocks {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.blockOption {
+  display: grid;
+  grid-template-columns: repeat(3, 20px);
+  gap: 3px;
+  cursor: pointer;
+}
+
+.blockOption div {
+  width: 20px;
+  height: 20px;
+  background: #22c55e;
+  border-radius: 4px;
+}
+
+button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  background: #22c55e;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: 10px;
+}
 </style>
 </head>
 
 <body>
 
-<div class="card">
-  <h3>👤 Cadastro / Login</h3>
+<h1>🟩 Block Blast</h1>
+<div id="score">Pontuação: 0</div>
 
-  <input id="nome" placeholder="Nome">
+<div id="board"></div>
 
-  <select id="sexo">
-    <option value="">Sexo</option>
-    <option>Masculino</option>
-    <option>Feminino</option>
-  </select>
+<h3>Escolha um bloco</h3>
+<div id="blocks"></div>
 
-  <select id="estado">
-    <option value="">Estado</option>
-    <option value="82">Alagoas (82)</option>
-    <option value="79">Sergipe (79)</option>
-  </select>
-
-  <button onclick="registrar()">Entrar</button>
-</div>
+<button onclick="resetGame()">🔄 Reiniciar</button>
 
 <script>
-function gerarNumero(ddd) {
-  let n = "9";
-  for (let i = 0; i < 8; i++) {
-    n += Math.floor(Math.random() * 10);
+const boardSize = 8;
+let score = 0;
+let board = [];
+let selectedBlock = null;
+
+// Criar tabuleiro
+function createBoard() {
+  board = [];
+  boardEl.innerHTML = "";
+  for (let i = 0; i < boardSize * boardSize; i++) {
+    board.push(0);
+    const cell = document.createElement("div");
+    cell.className = "cell";
+    cell.onclick = () => placeBlock(i);
+    boardEl.appendChild(cell);
   }
-  return ddd + n;
 }
 
-function registrar() {
-  const nome = document.getElementById("nome").value.trim();
-  const sexo = document.getElementById("sexo").value;
-  const estado = document.getElementById("estado").value;
+// Blocos possíveis
+const shapes = [
+  [[1]],
+  [[1,1]],
+  [[1],[1]],
+  [[1,1],[1,1]],
+  [[1,1,1]],
+  [[1],[1],[1]]
+];
 
-  if (!nome || !sexo || !estado) {
-    alert("Preencha tudo");
-    return;
-  }
-
-  let numero = gerarNumero(estado);
-
-  const usuario = { nome, sexo, numero };
-
-  localStorage.setItem("usuario", JSON.stringify(usuario));
-  localStorage.setItem("usuario_logado", numero);
-  localStorage.setItem("contatos_" + numero, JSON.stringify([]));
-
-  // redirecionamento seguro
-  setTimeout(() => {
-    window.location.replace("chat.html");
-  }, 100);
+// Criar opções de blocos
+function createBlocks() {
+  blocksEl.innerHTML = "";
+  shapes.forEach(shape => {
+    const opt = document.createElement("div");
+    opt.className = "blockOption";
+    shape.flat().forEach(v => {
+      const d = document.createElement("div");
+      if (!v) d.style.visibility = "hidden";
+      opt.appendChild(d);
+    });
+    opt.onclick = () => selectedBlock = shape;
+    blocksEl.appendChild(opt);
+  });
 }
 
-// ⚠️ NÃO redireciona automaticamente aqui
+// Colocar bloco
+function placeBlock(index) {
+  if (!selectedBlock) return;
+
+  const row = Math.floor(index / boardSize);
+  const col = index % boardSize;
+
+  for (let r = 0; r < selectedBlock.length; r++) {
+    for (let c = 0; c < selectedBlock[r].length; c++) {
+      if (selectedBlock[r][c]) {
+        const i = (row + r) * boardSize + (col + c);
+        if (row + r >= boardSize || col + c >= boardSize || board[i]) return;
+      }
+    }
+  }
+
+  for (let r = 0; r < selectedBlock.length; r++) {
+    for (let c = 0; c < selectedBlock[r].length; c++) {
+      if (selectedBlock[r][c]) {
+        const i = (row + r) * boardSize + (col + c);
+        board[i] = 1;
+        boardEl.children[i].classList.add("block");
+        score++;
+      }
+    }
+  }
+
+  scoreEl.innerText = "Pontuação: " + score;
+  selectedBlock = null;
+  checkLines();
+}
+
+// Limpar linhas completas
+function checkLines() {
+  for (let r = 0; r < boardSize; r++) {
+    let full = true;
+    for (let c = 0; c < boardSize; c++) {
+      if (!board[r * boardSize + c]) full = false;
+    }
+    if (full) clearRow(r);
+  }
+}
+
+function clearRow(r) {
+  for (let c = 0; c < boardSize; c++) {
+    board[r * boardSize + c] = 0;
+    boardEl.children[r * boardSize + c].classList.remove("block");
+  }
+  score += 10;
+  scoreEl.innerText = "Pontuação: " + score;
+}
+
+// Reiniciar
+function resetGame() {
+  score = 0;
+  scoreEl.innerText = "Pontuação: 0";
+  createBoard();
+}
+
+const boardEl = document.getElementById("board");
+const blocksEl = document.getElementById("blocks");
+const scoreEl = document.getElementById("score");
+
+createBoard();
+createBlocks();
 </script>
 
 </body>
