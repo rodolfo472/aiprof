@@ -6,161 +6,226 @@
 <title>Geometry Lite</title>
 
 <style>
-body{
-  margin:0;
-  background:#0a0a0a;
-  overflow:hidden;
-  font-family:Arial;
+body{margin:0;background:black;overflow:hidden;font-family:Arial;}
+canvas{display:block;}
+#ui{
+position:absolute;top:10px;left:10px;
+color:#0ff;font-size:18px;
+text-shadow:0 0 10px cyan;z-index:10;
 }
-
-#hud{
-  position:absolute;
-  top:10px;
-  left:10px;
-  color:#0ff;
-  font-size:20px;
-  text-shadow:0 0 10px cyan;
-}
-
 #start{
-  position:absolute;
-  top:50%;
-  left:50%;
-  transform:translate(-50%,-50%);
-  padding:20px 30px;
-  background:#0ff;
-  color:black;
-  font-size:22px;
-  border-radius:10px;
-  box-shadow:0 0 20px cyan;
+position:absolute;top:50%;left:50%;
+transform:translate(-50%,-50%);
+background:#0ff;color:black;
+padding:20px 30px;font-size:22px;
+border-radius:10px;
+box-shadow:0 0 25px cyan;
+text-align:center;z-index:10;
+white-space:pre-line;
 }
 </style>
 </head>
 <body>
 
-<div id="hud">Distância: <span id="score">0</span></div>
+<div id="ui">
+Progresso: <span id="progress">0</span>%<br>
+Recorde: <span id="best">0</span>%<br>
+Tentativas: <span id="tries">0</span>
+</div>
+
 <div id="start" onclick="startGame()">▶ TOCAR PARA COMEÇAR</div>
 
 <canvas id="game"></canvas>
 
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+/* ================= CANVAS ================= */
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+canvas.width=innerWidth;
+canvas.height=innerHeight;
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+/* ================= STORAGE ================= */
+let bestProgress = Number(localStorage.getItem("bestProgress")) || 0;
+let tries = Number(localStorage.getItem("tries")) || 0;
 
-let groundY = canvas.height - 120;
-let player, obstacles, speed, score, playing;
+document.getElementById("best").innerText = bestProgress;
+document.getElementById("tries").innerText = tries;
 
+/* ================= SOM ================= */
+const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+
+function sound(type,f1,f2,t){
+  const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.type=type;o.frequency.value=f1;g.gain.value=0.25;
+  o.connect(g);g.connect(audioCtx.destination);
+  o.start();
+  o.frequency.exponentialRampToValueAtTime(f2,audioCtx.currentTime+t);
+  o.stop(audioCtx.currentTime+t);
+}
+const playJumpSound=()=>sound("square",600,200,0.1);
+const playDeathSound=()=>sound("sawtooth",200,50,0.4);
+const playPortalSound=()=>sound("triangle",300,800,0.2);
+
+/* ================= VARIÁVEIS ================= */
+let ground,player,obstacles,portals;
+let speed,distance,gravity;
+let playing=false,hue=0;
+
+/* ================= RESET ================= */
 function reset(){
-  player = {
-    x:100,
-    y:groundY,
-    size:40,
-    vy:0,
-    jump:false
-  };
-  obstacles = [];
-  speed = 6;
-  score = 0;
-  playing = true;
+  ground=canvas.height-120;
+  gravity=1;
+  speed=7;
+  distance=0;
+  player={x:120,y:ground,size:35,vy:0,onGround:true};
+  obstacles=[];
+  portals=[];
+  playing=true;
 }
 
+/* ================= START ================= */
 function startGame(){
   document.getElementById("start").style.display="none";
+  tries++;
+  localStorage.setItem("tries",tries);
+  document.getElementById("tries").innerText=tries;
   reset();
   loop();
 }
 
+/* ================= CONTROLE ================= */
 function jump(){
-  if(!player.jump){
-    player.vy = -18;
-    player.jump = true;
+  if(player.onGround){
+    playJumpSound();
+    player.vy=-18*gravity;
+    player.onGround=false;
   }
 }
+addEventListener("click",jump);
+addEventListener("keydown",e=>{if(e.code==="Space")jump();});
 
-document.addEventListener("click",jump);
-document.addEventListener("keydown",(e)=>{
-  if(e.code==="Space") jump();
-});
-
+/* ================= SPAWN ================= */
 function spawnObstacle(){
   obstacles.push({
     x:canvas.width,
-    y:groundY,
-    w:40,
-    h:40
+    y:ground,
+    size:40,
+    type:Math.random()>0.5?"block":"spike",
+    pulse:0
   });
 }
+function spawnPortal(){
+  portals.push({x:canvas.width,y:ground-70,w:30,h:90});
+}
 
+/* ================= LOOP ================= */
 function loop(){
   if(!playing) return;
-
+  requestAnimationFrame(loop);
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // CHÃO
+  hue+=0.5;
+  document.body.style.background=`hsl(${hue},50%,5%)`;
+
   ctx.fillStyle="#111";
-  ctx.fillRect(0,groundY+40,canvas.width,10);
+  ctx.fillRect(0,ground+player.size,canvas.width,5);
 
-  // PLAYER
-  player.vy += 1;
-  player.y += player.vy;
+  player.vy+=gravity;
+  player.y+=player.vy;
 
-  if(player.y >= groundY){
-    player.y = groundY;
-    player.vy = 0;
-    player.jump = false;
+  if(gravity===1&&player.y>=ground){
+    player.y=ground;player.vy=0;player.onGround=true;
+  }
+  if(gravity===-1&&player.y<=80){
+    player.y=80;player.vy=0;player.onGround=true;
   }
 
+  ctx.save();
+  ctx.translate(player.x+player.size/2,player.y+player.size/2);
+  ctx.rotate(distance/50);
   ctx.fillStyle="#0ff";
   ctx.shadowColor="#0ff";
   ctx.shadowBlur=20;
-  ctx.fillRect(player.x,player.y,player.size,player.size);
+  ctx.fillRect(-player.size/2,-player.size/2,player.size,player.size);
+  ctx.restore();
 
-  // OBSTÁCULOS
-  ctx.shadowBlur=0;
-  ctx.fillStyle="#f00";
   obstacles.forEach((o,i)=>{
-    o.x -= speed;
-    ctx.fillRect(o.x,o.y,o.w,o.h);
-
-    // COLISÃO
-    if(player.x < o.x+o.w &&
-       player.x+player.size > o.x &&
-       player.y < o.y+o.h &&
-       player.y+player.size > o.y){
-       gameOver();
+    o.x-=speed;o.pulse+=0.1;
+    let glow=Math.sin(o.pulse)*5+15;
+    ctx.save();
+    ctx.translate(o.x+o.size/2,o.y+o.size/2);
+    if(o.type==="block"){
+      ctx.shadowColor="#ff00ff";ctx.shadowBlur=glow;
+      ctx.fillStyle="#ff00ff";
+      ctx.fillRect(-o.size/2,-o.size/2,o.size,o.size);
+      ctx.strokeStyle="#fff";ctx.lineWidth=3;
+      ctx.strokeRect(-o.size/2,-o.size/2,o.size,o.size);
+    }else{
+      ctx.shadowColor="#ff0000";ctx.shadowBlur=glow;
+      ctx.fillStyle="#ff0000";
+      ctx.beginPath();
+      ctx.moveTo(0,-o.size/2);
+      ctx.lineTo(o.size/2,o.size/2);
+      ctx.lineTo(-o.size/2,o.size/2);
+      ctx.closePath();ctx.fill();
     }
+    ctx.restore();
 
-    if(o.x+o.w < 0){
-      obstacles.splice(i,1);
-      score++;
-      speed += 0.1;
+    if(collide(o)) gameOver();
+    if(o.x+o.size<0) obstacles.splice(i,1);
+  });
+
+  portals.forEach((p,i)=>{
+    p.x-=speed;
+    ctx.shadowColor="purple";ctx.shadowBlur=20;
+    ctx.fillStyle="purple";
+    ctx.fillRect(p.x,p.y,p.w,p.h);
+    if(collide(p)){
+      gravity*=-1;
+      playPortalSound();
+      portals.splice(i,1);
     }
   });
 
-  if(Math.random() < 0.02){
-    spawnObstacle();
+  ctx.shadowBlur=0;
+
+  if(Math.random()<0.02) spawnObstacle();
+  if(Math.random()<0.005) spawnPortal();
+
+  speed+=0.002;
+  distance+=speed;
+
+  let progress=Math.min(100,Math.floor(distance/80));
+  document.getElementById("progress").innerText=progress;
+
+  if(progress>bestProgress){
+    bestProgress=progress;
+    localStorage.setItem("bestProgress",bestProgress);
+    document.getElementById("best").innerText=bestProgress;
   }
-
-  document.getElementById("score").innerText = score;
-
-  requestAnimationFrame(loop);
 }
 
+/* ================= COLISÃO ================= */
+function collide(o){
+  return player.x<o.x+(o.w||o.size)&&
+         player.x+player.size>o.x&&
+         player.y<o.y+(o.h||o.size)&&
+         player.y+player.size>o.y;
+}
+
+/* ================= GAME OVER ================= */
 function gameOver(){
   playing=false;
-  document.getElementById("start").innerText =
-    "💀 GAME OVER\nPontuação: "+score+"\nTOCAR PARA REINICIAR";
+  playDeathSound();
+  document.getElementById("start").innerText=
+  "💀 GAME OVER\nToque para tentar novamente";
   document.getElementById("start").style.display="block";
 }
 
-// RESPONSIVO
-window.addEventListener("resize",()=>{
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  groundY = canvas.height - 120;
+/* ================= RESIZE ================= */
+addEventListener("resize",()=>{
+  canvas.width=innerWidth;
+  canvas.height=innerHeight;
 });
 </script>
 
